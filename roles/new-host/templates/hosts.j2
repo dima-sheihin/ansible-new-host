@@ -1,0 +1,14 @@
+#
+# {{ ansible_managed }}
+127.0.0.1   localhost
+
+192.168.1.95  centos-ansible  centos-ansible.home.org
+192.168.1.99  admin           admin.home.org
+192.168.1.101 ubuntu-media    ubuntu-media.home.org
+192.168.1.83  tmp-centos      tmp-centos.home.org
+192.168.1.82  tmp-ubuntu      tmp-ubuntu.home.org
+
+{% for item in play_hosts %}
+{% set short_name = item.split('.') %}
+{{ hostvars[item]['ansible_host'] }}  {{ short_name[0] }}  {{ item }}
+{% endfor %}

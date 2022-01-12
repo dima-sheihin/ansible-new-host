@@ -1,0 +1,126 @@
+---
+
+# Удалим стандартные файлы и каталоге /etc/yum.repos.d/ создаем свой репозитарий
+- name: make local repository
+  block:
+  - file: path=/etc/yum.repos.d/CentOS-Base.repo state=absent
+
+  - file:
+      path: "{{ item }}"
+      state: absent
+    with_items:
+      - /etc/yum.repos.d/CentOS-Base.repo
+      - /etc/yum.repos.d/CentOS-CR.repo
+      - /etc/yum.repos.d/CentOS-Debuginfo.repo
+      - /etc/yum.repos.d/CentOS-Media.repo
+      - /etc/yum.repos.d/CentOS-Sources.repo
+      - /etc/yum.repos.d/CentOS-Vault.repo
+      - /etc/yum.repos.d/CentOS-fasttrack.repo
+      - /etc/yum.repos.d/CentOS-x86_64-kernel.repo
+
+  - yum_repository:
+      name: base
+      description: CentOS-$releasever Base
+      file: local_repository
+      baseurl: http://ubuntu-media.home.org/centos/$releasever/os/$basearch/
+      gpgcheck: no
+      enabled: yes
+    register: rep_base
+
+  - yum_repository:
+      name: updates
+      description: CentOS-$releasever Updates
+      file: local_repository
+      baseurl: http://ubuntu-media.home.org/centos/$releasever/updates/$basearch/
+      gpgcheck: no
+      enabled: yes
+    register: rep_updates
+
+  - yum_repository:
+      name: extras
+      description: CentOS-$releasever Extras
+      file: local_repository
+      baseurl: http://ubuntu-media.home.org/centos/$releasever/extras/$basearch/
+      gpgcheck: no
+      enabled: yes
+    register: rep_extras
+
+  - yum_repository:
+      name: epel
+      description: CentOS-$releasever Extra Packages
+      file: local_repository
+      baseurl: http://ubuntu-media.home.org/centos/$releasever/epel/$basearch
+      gpgcheck: no
+      enabled: yes
+    register: rep_epel
+
+  when:
+    - rep_os_update_make_local_repository is defined
+    - rep_os_update_make_local_repository == true
+
+# Выполним удаление и пересоздание кеша мета-данных
+- block:
+
+  - name: yum-clean-metadata
+    command: yum clean metadata
+    args:
+      warn: no
+
+  - name: yum-makecache
+    command: yum makecache
+    args:
+      warn: no
+  when: ( rep_os_update_make_local_cache is defined and rep_os_update_make_local_cache == true ) and ( rep_base.changed == true or rep_updates.changed == true or rep_extras.changed == true or rep_epel.changed == true )
+
+
+#- debug: var=rep_epel.changed
+
+
+# Выполним только скачивание пакетов на локальный сервер (но не установку)
+- block:
+
+  - name: yum-downloadonly
+    yum:
+      name: '*'
+      state: latest
+      download_only: true
+
+  when:
+    - rep_os_update_download_local_packages is defined
+    - rep_os_update_download_local_packages == true
+
+
+# Выполним установку и обновление пакетов
+- block:
+
+  - name: yum-update
+    yum:
+      name: '*'
+      state: latest
+
+  when:
+    - rep_os_update_update_packages_os is defined
+    - rep_os_update_update_packages_os == true
+
+# Выполним перезагрузку сервера
+- block:
+
+  - name: Restart machine
+    shell: "sleep 3 && sudo shutdown -r now"
+    async: 1
+    poll: 0
+
+
+  when:
+    - rep_os_update_restart_os is defined
+    - rep_os_update_restart_os == true
+
+
+#- name: yum-update
+#  yum:
+#    name: '*'
+#    state: latest
+#    update_cache: true
+#    autoremove: true
+#    download_only: no
+#    update_only: no

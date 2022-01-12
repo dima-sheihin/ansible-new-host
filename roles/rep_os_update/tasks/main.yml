@@ -1,0 +1,16 @@
+---
+
+# Укажем repositories
+
+# - debug: var=ansible_facts['os_family']
+# - debug: var=ansible_facts['distribution_major_version']
+
+- name: "import tasks repositories_redhat.yml"
+  when: ansible_facts['os_family'] == "RedHat"
+  import_tasks: repositories_redhat.yml
+
+- name: "import tasks repositories_debian.yml"
+  when: ansible_facts['os_family'] == "Debian"
+  import_tasks: repositories_debian.yml
+
+

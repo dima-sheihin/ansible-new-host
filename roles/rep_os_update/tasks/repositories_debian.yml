@@ -1,0 +1,122 @@
+---
+
+# - debug: var=ansible_facts['distribution_major_version']
+# - debug: var=rep_os_update_ubuntu_code_name
+
+# Удалим стандартный файл
+- name: make local repository
+  block:
+  - file: path=/etc/apt/sources.list state=absent
+  - file: path=/etc/apt/sources.list.d/local_repository.list state=absent
+
+  - name: "Debian 16 xenial"
+    set_fact:
+      rep_os_update_ubuntu_code_name: xenial
+    when: ansible_facts['distribution_major_version'] == "16"
+
+  - name: "Debian 20 focal"
+    set_fact:
+      rep_os_update_ubuntu_code_name: focal
+    when: ansible_facts['distribution_major_version'] == "20"
+
+  # - debug: msg="rep_os_update_ubuntu_code_name = {{ rep_os_update_ubuntu_code_name }}"
+
+  - apt_repository:
+      repo: deb http://ubuntu-media.home.org/ubuntu/mirror/archive.ubuntu.com/ubuntu {{ rep_os_update_ubuntu_code_name }} main restricted universe
+      state: present
+      update_cache: no
+      validate_certs: no
+      filename: local_repository
+
+  - apt_repository:
+      repo: deb http://ubuntu-media.home.org/ubuntu/mirror/archive.ubuntu.com/ubuntu {{ rep_os_update_ubuntu_code_name }}-updates main restricted universe
+      state: present
+      update_cache: no
+      validate_certs: no
+      filename: local_repository
+
+  - apt_repository:
+      repo: deb http://ubuntu-media.home.org/ubuntu/mirror/archive.ubuntu.com/ubuntu {{ rep_os_update_ubuntu_code_name }}-security main restricted universe
+      state: present
+      update_cache: no
+      validate_certs: no
+      filename: local_repository
+
+  when:
+    - rep_os_update_make_local_repository is defined
+    - rep_os_update_make_local_repository == true
+
+# Выполним удаление и пересоздание кеша мета-данных
+- block:
+
+  - name: apt-clean-metadata
+    command: apt-get clean
+    args:
+      warn: no
+
+  - name: apt-makecache
+    command: apt-get update
+    args:
+      warn: no
+
+  - name: Run the equivalent of apt-get update as a separate step
+    apt:
+      update_cache: yes
+
+  when: rep_os_update_make_local_cache is defined and rep_os_update_make_local_cache == true
+
+
+
+
+# Выполним только скачивание пакетов на локальный сервер (но не установку)
+- block:
+  - debug: var=rep_os_update_download_local_packages
+
+
+
+  when:
+    - rep_os_update_download_local_packages is defined
+    - rep_os_update_download_local_packages == true
+
+
+
+
+# Выполним установку и обновление пакетов
+- block:
+
+  - name: Update all packages to their latest version
+    apt:
+      name: "*"
+      state: latest
+
+  - name: Upgrade the OS (apt-get dist-upgrade)
+    apt:
+      upgrade: dist
+
+  - name: Remove useless packages from the cache
+    apt:
+      autoclean: yes
+
+  - name: Remove dependencies that are no longer required
+    apt:
+      autoremove: yes
+
+  when:
+    - rep_os_update_update_packages_os is defined
+    - rep_os_update_update_packages_os == true
+
+
+
+# Выполним перезагрузку сервера
+- block:
+
+  - name: Restart machine
+    shell: "sleep 3 && sudo shutdown -r now"
+    async: 1
+    poll: 0
+
+  when:
+    - rep_os_update_restart_os is defined
+    - rep_os_update_restart_os == true
+
+

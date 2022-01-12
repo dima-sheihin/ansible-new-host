@@ -1,0 +1,19 @@
+---
+# Переменные которые объявляются для отработки функционала модуля, переменные можно переопределить в плайбуке или в инвентори
+
+# Удалим стандартные файлы и каталоге /etc/yum.repos.d/ создаем свой репозитарий
+rep_os_update_make_local_repository: true
+
+# Выполним удаление и пересоздание кеша мета-данных
+rep_os_update_make_local_cache: true
+
+# Выполним только скачивание пакетов на локальный сервер (но не установку)
+rep_os_update_download_local_packages: false
+
+# Выполним установку пакетов
+rep_os_update_update_packages_os: false
+
+# Выполним перезагрузку сервера
+rep_os_update_restart_os: false
+
+rep_os_update_ubuntu_code_name: no

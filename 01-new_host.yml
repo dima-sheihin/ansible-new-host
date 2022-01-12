@@ -1,0 +1,23 @@
+---
+- hosts: new_host
+  tasks:
+  vars:
+    - rep_os_update_make_local_repository: true
+    - rep_os_update_make_local_cache: true
+    - rep_os_update_download_local_packages: true
+    - rep_os_update_update_packages_os: true
+    - rep_os_update_restart_os: false
+  roles:
+   - new-host
+   - rep_os_update
+
+
+- hosts: new_host
+  vars:
+    - rep_os_update_make_local_repository: true
+    - rep_os_update_make_local_cache: true
+    - rep_os_update_download_local_packages: false
+    - rep_os_update_update_packages_os: false
+    - rep_os_update_restart_os: true
+  roles:
+    - rep_os_update
